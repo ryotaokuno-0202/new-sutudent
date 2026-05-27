@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lecture Audio Notes</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #fdfaf2;
+      color: #333;
+    }
+    .header {
+      text-align: center;
+      padding: 60px 20px;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.4), #fdfaf2), 
+                  url('https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1200&q=80');
+      background-size: cover;
+      background-position: center;
+    }
+    .header h1 {
+      font-size: 42px;
+      font-weight: 700;
+      margin: 0 0 10px 0;
+      color: #1a2a3a;
+    }
+    .header p {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      margin: 0;
+    }
+    .settings-area {
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: right;
+      padding: 10px 20px;
+    }
+    .settings-btn {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .card {
+      max-width: 600px;
+      margin: 10px auto 40px auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid #eef0f2;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1a2a3a;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ebdcb9;
+      border-radius: 6px;
+      background-color: #fcfbf7;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .file-input-wrapper {
+      border: 1px solid #e0e0e0;
+      padding: 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+    }
+    .hint-text {
+      font-size: 11px;
+      color: #999;
+      margin-top: 6px;
+    }
+    .submit-btn {
+      width: 100%;
+      background-color: #7cb5ec;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 10px;
+    }
+    .submit-btn:hover {
+      background-color: #62a0dd;
+    }
+    .output-section {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    .output-box {
+      background: #fff;
+      padding: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      min-height: 60px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Lecture Audio Notes</h1>
+    <p>講義の音声を、知識に変える。<br>AIが文字起こしと要約を自動生成します。</p>
+  </div>
+
+  <div class="settings-area">
+    <button class="settings-btn">⚙ APIキーを再設定</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>🎙</span> 講義データの入力
+    </div>
+
+    <div class="form-group">
+      <label>講義名（任意）</label>
+      <input type="text" id="lectureName" placeholder="例：経営学概論 第5回" />
+    </div>
+
+    <div class="form-group">
+      <label>音声ファイル</label>
+      <div class="file-input-wrapper">
+        <input type="file" id="audioFile" accept=".wav,.mp3,.m4a,.flac" />
+      </div>
+      <div class="hint-text">※ 推奨: 20MB以下のMP3/WAV/M4Aファイル。長い講義は分割してください。</div>
+    </div>
+
+    <button id="runBtn" class="submit-btn">✨ AIノートを作成する</button>
+  </div>
+
+  <div class="output-section">
+    <div id="errorArea" style="color: red; font-weight: bold;"></div>
+    <h3>文字起こし</h3>
+    <div id="transcription" class="output-box"></div>
+    <h3>要約</h3>
+    <div id="summary" class="output-box"></div>
+    <h3>要点</h3>
+    <ul id="keyPoints"></ul>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById('runBtn');
+    const audioFileInput = document.getElementById('audioFile');
+    const transcriptionDiv = document.getElementById('transcription');
+    const summaryDiv = document.getElementById('summary');
+    const keyPointsUl = document.getElementById('keyPoints');
+    const errorArea = document.getElementById('errorArea');
+
+    runBtn.addEventListener('click', async () => {
+      errorArea.textContent = '';
+      const lectureName = document.getElementById('lectureName').value;
+      const file = audioFileInput.files[0];
+
+      if (!file) {
+        errorArea.textContent = '音声ファイルを選択してください。';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('lectureName', lectureName);
+      formData.append('audioFile', file);
+
+      try {
+        transcriptionDiv.textContent = '処理中...しばらくお待ちください。';
+        const res = await fetch('/process', { method: 'POST', body: formData });
+        if (!res.ok) {
+          errorArea.textContent = 'エラーが発生しました。';
+          return;
+        }
+        const payload = await res.json();
+        transcriptionDiv.textContent = payload.transcription || '';
+        summaryDiv.textContent = payload.summary || '';
+        keyPointsUl.innerHTML = '';
+        (payload.keyPoints || []).forEach((kp) => {
+          const li = document.createElement('li');
+          li.textContent = kp;
+          keyPointsUl.appendChild(li);
+        });
+      } catch (err) {
+        errorArea.textContent = 'API呼び出し中にエラーが発生しました。';
+      }
+    });
+  </script>
+</body>
+</html>
